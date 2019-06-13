@@ -1,0 +1,29 @@
+{
+    "$schema": "https://arkit.pro/schema.json",
+    "excludePatterns": ["test/**", "tests/**", "**/*.test.*", "**/*.spec.*"],
+    "components": [
+      {
+        "type": "Dependency",
+        "patterns": ["node_modules/*"]
+      },
+      {
+        "type": "Component",
+        "patterns": ["**/*.ts", "**/*.tsx"]
+      }
+    ],
+    "output": [
+      {
+        "path": "arkit.svg",
+        "groups": [
+          {
+            "first": true,
+            "components": ["Component"]
+          },
+          {
+            "type": "Dependencies",
+            "components": ["Dependency"]
+          }
+        ]
+      }
+    ]
+  }

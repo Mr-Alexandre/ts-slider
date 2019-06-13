@@ -1,0 +1,75 @@
+.lav-slider{
+  width: 100%;
+  height: 400px;
+  background-color: bisque;
+  position: relative;
+}
+.lav-slider__controls-btn{
+  position: absolute;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  will-change: transform;
+}
+.lav-slider__btn-left, .lav-slider__btn-right{
+  width: 30px;
+  height: 30px;
+  background-color: lightslategrey;
+  border-radius: 100%;
+}
+.lav-slider__btn-left{
+  float: left;
+}
+.lav-slider__btn-right{
+  float: right;
+}
+.lav-slider__btn_disabled{
+  background-color: darkred;
+}
+.lav-slider__dots{
+  position: absolute;
+  width: 100%;
+  margin: 0 auto;
+  bottom: 20px;
+  text-align: center;
+  z-index: 2;
+  will-change: transform;
+}
+.lav-slider_dot{
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 100%;
+  background-color: lightslategrey;
+  margin: 0 5px;
+}
+.lav-slider_dot_active{
+  background-color: darkred;
+}
+.lav-slider__window{
+  //width: 400%;
+  //height: 100%;
+  font-size: 0;
+  will-change: transform;
+  //transform: translateZ(0);
+}
+.lav-slider__window_duration{
+  transition-duration: 0.4s;
+}
+.lav-slider__contents{
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+}
+.lav-slider__item{
+  display: inline-block;
+  vertical-align: top;
+  width: 1135px;
+  height: 100%;
+  background-color: blanchedalmond;
+  overflow: hidden;
+  background-position: center;
+  background-size: cover;
+}

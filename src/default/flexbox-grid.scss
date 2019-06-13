@@ -1,0 +1,203 @@
+$breakpoints: (
+  "xs": 320,
+  "sm": 768,
+  "md": 1024,
+  "lg": 1440,
+  "xl": 1440,
+);
+$breakpoints-container: (
+  "xs": 280,
+  "sm": 565,
+  "md": 850,
+  "lg": 1135,
+  "xl": 1135,
+);
+$columns: 12;
+$gap: 5;
+
+@mixin make-row() {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: #{$gap / -2}px;
+  margin-left: #{$gap / -2}px;
+}
+
+@mixin column-property() {
+  position: relative;
+  width: 100%;
+  min-height: 1px;
+  padding-right: #{$gap / 2}px;
+  padding-left: #{$gap / 2}px;
+  box-sizing: border-box;
+}
+
+@mixin column($classPrefix, $className, $classPostfix, $pointPrefix, $point, $pointPostfix, $i){
+  $name: '.' + $classPrefix + $className + $classPostfix + '-' + $pointPrefix + $point + $pointPostfix + '-' + $i;
+  #{$name} {
+    @content;
+  }
+}
+
+.col {
+  flex-basis: 0;
+  flex-grow: 1;
+  max-width: 100%;
+
+  &-auto {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@for $i from 1 through $columns {
+  $width: $i / $columns;
+  .col-#{$i} {
+    flex: 0 0 percentage($width);
+    // Add a `max-width` to ensure content within each column does not blow out
+    // the width of the column. Applies to IE10+ and Firefox. Chrome and Safari
+    // do not appear to require this.
+    max-width: percentage($width);
+  }
+}
+@for $i from 1 through $columns {
+  .order-#{$i} {
+    order: $i;
+  }
+}
+
+
+@mixin create-columns($className: 'col') {
+  $names: '';
+  @each $point, $pointVal in $breakpoints {
+
+    @media (min-width: $pointVal + 'px') {
+
+      @for $i from 1 through $columns {
+        $names : $names + '.' + $className + '-' + $point + '-' + $i + ', ';
+      }
+
+      .col-#{$point} {
+        flex-basis: 0;
+        flex-grow: 1;
+        max-width: 100%;
+      }
+      .col-#{$point}-auto {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: none;
+      }
+
+
+      .flex-#{$point}-row            { flex-direction: row !important; }
+      .flex-#{$point}-column         { flex-direction: column !important; }
+      .flex-#{$point}-row-reverse    { flex-direction: row-reverse !important; }
+      .flex-#{$point}-column-reverse { flex-direction: column-reverse !important; }
+
+      .flex-#{$point}-wrap         { flex-wrap: wrap !important; }
+      .flex-#{$point}-nowrap       { flex-wrap: nowrap !important; }
+      .flex-#{$point}-wrap-reverse { flex-wrap: wrap-reverse !important; }
+      .flex-#{$point}-fill         { flex: 1 1 auto !important; }
+      .flex-#{$point}-grow-0       { flex-grow: 0 !important; }
+      .flex-#{$point}-grow-1       { flex-grow: 1 !important; }
+      .flex-#{$point}-shrink-0     { flex-shrink: 0 !important; }
+      .flex-#{$point}-shrink-1     { flex-shrink: 1 !important; }
+
+      .justify-content-#{$point}-start   { justify-content: flex-start !important; }
+      .justify-content-#{$point}-end     { justify-content: flex-end !important; }
+      .justify-content-#{$point}-center  { justify-content: center !important; }
+      .justify-content-#{$point}-between { justify-content: space-between !important; }
+      .justify-content-#{$point}-around  { justify-content: space-around !important; }
+
+      .align-items-#{$point}-start    { align-items: flex-start !important; }
+      .align-items-#{$point}-end      { align-items: flex-end !important; }
+      .align-items-#{$point}-center   { align-items: center !important; }
+      .align-items-#{$point}-baseline { align-items: baseline !important; }
+      .align-items-#{$point}-stretch  { align-items: stretch !important; }
+
+      .align-content-#{$point}-start   { align-content: flex-start !important; }
+      .align-content-#{$point}-end     { align-content: flex-end !important; }
+      .align-content-#{$point}-center  { align-content: center !important; }
+      .align-content-#{$point}-between { align-content: space-between !important; }
+      .align-content-#{$point}-around  { align-content: space-around !important; }
+      .align-content-#{$point}-stretch { align-content: stretch !important; }
+
+      .align-self-#{$point}-auto     { align-self: auto !important; }
+      .align-self-#{$point}-start    { align-self: flex-start !important; }
+      .align-self-#{$point}-end      { align-self: flex-end !important; }
+      .align-self-#{$point}-center   { align-self: center !important; }
+      .align-self-#{$point}-baseline { align-self: baseline !important; }
+      .align-self-#{$point}-stretch  { align-self: stretch !important; }
+
+
+      @for $i from 1 through $columns {
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '', $i) {
+          flex: 0 0 percentage($width);
+          // Add a `max-width` to ensure content within each column does not blow out
+          // the width of the column. Applies to IE10+ and Firefox. Chrome and Safari
+          // do not appear to require this.
+          max-width: percentage($width);
+        }
+      }
+
+      @for $i from 0 through $columns + 1{
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '-offset', $i) {
+          margin-left: percentage($width);
+        }
+      }
+
+      @for $i from 0 through $columns + 1{
+        $width: $i / $columns;
+        .order-#{$point}-#{$i} {
+          order: $i;
+        }
+      }
+
+    }
+  }
+  /*
+    common styles
+  */
+  #{$names} {
+    @include column-property();
+  }
+}
+
+@mixin create-container() {
+  @each $point, $pointVal in $breakpoints {
+    @media (min-width: $pointVal + 'px') {
+      .container{
+        max-width: #{map_get($breakpoints-container, $point)}px;
+      }
+    }
+  }
+}
+
+.container{
+  width: 100%;
+  margin: 0 auto;
+}
+@include create-container;
+
+.row {
+  @include make-row;
+
+  * {
+    font-size: 16px;
+  }
+
+  &_no-gutters {
+    margin-right: 0;
+    margin-left: 0;
+
+    > .col,
+    > [class*="col-"] {
+      padding-right: 0;
+      padding-left: 0;
+    }
+  }
+}
+
+@include create-columns();

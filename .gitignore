@@ -1,0 +1,10 @@
+node_modules
+package-lock.json
+dist
+
+# JetBrains ide
+.idea
+
+# Visual Studio Code
+.settings
+.vscode

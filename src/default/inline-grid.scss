@@ -1,0 +1,153 @@
+/*
+PROPERTY
+*/
+$breakpoints: (
+  "xs": 320,
+  "sm": 768,
+  "md": 1024,
+  "lg": 1440,
+  "xl": 1440,
+);
+$breakpoints-container: (
+  "xs": 280,
+  "sm": 565,
+  "md": 850,
+  "lg": 1135,
+  "xl": 1135,
+);
+$columns: 12;
+$gap: 5;
+$mode: 'inline'; //flex
+
+@mixin clearfix() {
+  &:before,
+  &:after {
+    display: table; // 2
+    content: " "; // 1
+  }
+  &:after {
+    clear: both;
+  }
+}
+@mixin make-row() {
+  margin-right: #{$gap / -2}px;
+  margin-left: #{$gap / -2}px;
+  @include clearfix;
+}
+
+@mixin column-property() {
+  position: relative;
+  min-height: 1px;
+  padding-right: #{$gap / 2}px;
+  padding-left: #{$gap / 2}px;
+  box-sizing: border-box;
+  vertical-align: top;
+  text-align: left;
+  display: inline-block;
+}
+
+@mixin column($classPrefix, $className, $classPostfix, $pointPrefix, $point, $pointPostfix, $i){
+  $name: '.' + $classPrefix + $className + $classPostfix + '-' + $pointPrefix + $point + $pointPostfix + '-' + $i;
+  #{$name} {
+    @content;
+  }
+}
+
+@mixin create-columns($className: 'col') {
+  $names: '';
+  @each $point, $pointVal in $breakpoints {
+
+    @media (min-width: $pointVal + 'px') {
+
+      @for $i from 1 through $columns {
+        $names : $names + '.' + $className + '-' + $point + '-' + $i + ', ';
+      }
+
+      @for $i from 1 through $columns {
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '', $i) {
+          width: percentage($width);
+        }
+      }
+
+      @for $i from 0 through $columns + 1 {
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '-pull', $i) {
+          right: percentage($width);
+        }
+      }
+
+      @for $i from 0 through $columns + 1{
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '-push', $i) {
+          left: percentage($width);
+        }
+      }
+
+      @for $i from 0 through $columns + 1{
+        $width: $i / $columns;
+        @include column('', $className, '', '', $point, '-offset', $i) {
+          margin-left: percentage($width);
+        }
+      }
+
+    }
+  }
+  /*
+    common styles
+  */
+  #{$names} {
+    @include column-property();
+  }
+}
+
+@mixin create-container() {
+  @each $point, $pointVal in $breakpoints {
+    @media (min-width: $pointVal + 'px') {
+      .container{
+        max-width: #{map_get($breakpoints-container, $point)}px;
+      }
+    }
+  }
+}
+
+.container{
+  margin: 0 auto;
+  width: 100%;
+}
+@include create-container;
+
+.row {
+  font-size: 0;
+  @include make-row;
+}
+.row * {
+  font-size: 16px;
+}
+.space-between-inline{
+  /*WARNING: This method only works with uncompressed HTML and requires a fixed height on the container and not work with tag ('a', 'span') */
+  text-align: justify;
+  font-size: 0.04px;
+  line-height: 0;
+
+  &::after{
+    content: "";
+    display: inline-block;
+    width: 100%;
+  }
+  & > :nth-child(n + 1){
+    display: inline-block;
+    line-height: normal;
+  }
+}
+.row_no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+
+  [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@include create-columns()

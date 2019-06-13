@@ -1,0 +1,27 @@
+extends ./base.pug
+
+block title
+    title Main
+
+block body
+    .container
+        h3 Slider
+        .row.row_no-gutters
+            .col-xs-12
+                .lav-slider#slider-1
+                    .lav-slider__controls-btn
+                        .lav-slider__btn-left
+                        .lav-slider__btn-right
+                    .lav-slider__dots
+                        .lav-slider_dot
+                    .lav-slider__contents
+                        .lav-slider__window
+                             each src in ['./media/image/sliderPic1.jpg', './media/image/sliderPic2.jpg', './media/image/sliderPic3.jpg', './media/image/sliderPic4.jpg', ]
+                                 .lav-slider__item(style='background-image: url("'+src+'");' src=src)
+        h3 Links
+        ul
+            li
+                a(href='./pages/test-animate/test-animate.html') Animate test
+            li
+                a(href='./pages/js-animation/index.html') Js Animation
+

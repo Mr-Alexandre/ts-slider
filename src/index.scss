@@ -1,0 +1,15 @@
+@import 'default/variables';
+@import 'default/mixin';
+@import 'default/fonts';
+@import 'default/default';
+@import 'default/spacing';
+@import 'default/normalize';
+@import 'default/util';
+@import 'default/animation';
+/*Grid*/
+@import 'default/inline-grid';
+//@import 'default/flexbox-grid';
+
+@import './components/slider/slider';
+@import './pages/test-animate/index';
+@import './pages/js-animation/index';
