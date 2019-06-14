@@ -22,6 +22,7 @@ interface SliderConfig {
     dotsBox?: HTMLElement,
     axis?: SliderAxis,
     visibleItems?: number,
+    countSwipe?: number,
     gutter?: number,
     fixedWidth?: number | boolean,
     autoWidth?: boolean,
@@ -64,6 +65,12 @@ export default class Slider {
     private currentPosition: number;
     private lastPosition: number;
 
+    private moveHandler: EventListener;
+    private moveEndHandler: EventListener;
+    private fixedSliderX: number;
+    private liveSliderX: number;
+    private startX: number;
+
     private cursorPos: SliderCursor = {
         lastX: null,
         lastY: null
@@ -72,6 +79,7 @@ export default class Slider {
     private config: SliderConfig = {
         axis: SliderAxis.horizontal,
         visibleItems: 1,
+        countSwipe: 1,
         gutter: 0,
         fixedWidth: false,
         autoWidth: false,
@@ -96,6 +104,10 @@ export default class Slider {
         items: [],
         itemsPer: []
     };
+    private LeftXItem: number;
+    private RightXItem: number;
+    private indexDragItem: number;
+    private increment: number;
 
 
     constructor(slider: HTMLElement, config?: SliderConfig) {
@@ -114,7 +126,7 @@ export default class Slider {
 
         this.countItem = this.items.length;
         this.currentPosition = this.config.startIndex;
-        this.lastPosition = null;
+        this.lastPosition = this.currentPosition;
 
         this.init();
     }
@@ -141,16 +153,19 @@ export default class Slider {
 
     private calcProperty(): void {
         let widthSlider: number = this.slider.offsetWidth;
-        for (let i = 0; i < this.countItem; i++) {
-            this.dimension.items.push((<HTMLElement>this.items.item(i)).offsetWidth);
-        }
 
         if (!this.config.autoWidth) {
             this.dimension.window = widthSlider * this.countItem;
+            for (let i = 0; i < this.countItem; i++) {
+                this.dimension.items.push(widthSlider);
+            }
         } else {
             this.dimension.window = this.dimension.items.reduce((first, next) => {
                 return first + next;
             })
+            for (let i = 0; i < this.countItem; i++) {
+                this.dimension.items.push((<HTMLElement>this.items.item(i)).offsetWidth);
+            }
         }
 
         this.dimension.windowPer = (this.dimension.window/widthSlider) * 100;
@@ -162,47 +177,7 @@ export default class Slider {
     }
 
     private checkStartIndex(): void {
-        if (this.config.startIndex <= 0) {
-            this.config.startIndex = 1;
-        }
-    }
-
-    private prev(): void {
-        this.calcPrevPosition();
-        this.updateAutoHeight();
-        this.updateBtnStyle();
-        this.updateDotsStyle();
-        if (this.lastPosition == 1) {
-            if (this.config.isLoop) {
-
-            }
-            if (this.config.isRewind) {
-                this.setPosition(-this.getLastPos());
-            }
-        } else {
-            let currentWidth: number = this.getTranslateXValue();
-            this.setPosition(-(currentWidth - this.getIncrease()));
-        }
-
-    }
-
-    private next(): void {
-        this.calcNextPosition();
-        this.updateAutoHeight();
-        this.updateBtnStyle();
-        this.updateDotsStyle();
-        if (this.lastPosition == this.dimension.items.length) {
-            if (this.config.isLoop) {
-
-            }
-            if (this.config.isRewind) {
-                this.setPosition(0);
-            }
-        } else {
-            let currentWidth: number = this.getTranslateXValue();
-            this.setPosition(-(currentWidth + this.getIncrease()));
-        }
-
+        this.config.startIndex = this.config.startIndex - 1;
     }
 
     private getTranslateXValue(): number {
@@ -218,6 +193,131 @@ export default class Slider {
         });
     }
 
+    private setDotsEvents(): void {
+        if (!this.config.hasDots) return;
+
+        this.dotsBox.addEventListener('click', (event: Event) => {
+            let dot: HTMLElement = <HTMLElement>( <Element> event.target ).closest(`.${SliderClasses.dot}`);
+            if (dot) {
+                let index: number = this.getIndexElement(this.dotsBox, dot);
+                this.goTo(index);
+            }
+        })
+    }
+
+    private setDragEvents(): void {
+        if (this.config.isMouseDrag) {
+
+            this.globalEventDelegate('mousedown', `.${SliderClasses.item}`, (element: Element, event: MouseEvent) => {
+                let parent: HTMLElement = <HTMLElement> element.closest(`.${SliderClasses.main}`);
+                if (parent == this.slider) {
+                    this.dragStart(<HTMLElement> element, event);
+                }
+            });
+
+        }
+    }
+
+    private dragStart(item: HTMLElement, event: MouseEvent): void {
+        event.preventDefault();
+
+        this.fixedSliderX = Math.abs(this.getTranslateXValue());
+        this.liveSliderX = this.fixedSliderX;
+        this.startX = event.pageX;
+        this.LeftXItem = item.getBoundingClientRect().left;
+        this.RightXItem = item.getBoundingClientRect().right;
+        this.indexDragItem = this.getIndexElement(this.window, item);
+
+        this.moveHandler = (mouseEvent: MouseEvent) => {
+            this.drag(mouseEvent);
+        };
+        this.moveEndHandler = (mouseEvent: MouseEvent) => {
+            this.dragEnd(mouseEvent);
+        };
+
+        item.addEventListener('dragstart', () => {
+            return false;
+        });
+
+        this.switchShuffleAnimation(false);
+
+        document.onmousemove = this.moveHandler;
+        document.onmouseup = this.moveEndHandler;
+        document.ontouchmove = this.moveHandler;
+        document.ontouchend = this.moveEndHandler;
+
+        // document.addEventListener('mousemove', this.moveHandler);
+        // document.addEventListener('mouseup', this.moveEndHandler);
+        // document.addEventListener('touchmove', this.moveHandler);
+        // document.addEventListener('touchend', this.moveEndHandler);
+
+    }
+
+    private drag(mouseEvent: MouseEvent): void {
+        mouseEvent.preventDefault();
+
+        let increment = ()=> {
+            let dist: number = this.startX - mouseEvent.pageX;
+            let distInPer: number = (dist / this.dimension.items[this.indexDragItem]) * 100;
+            let inc: number = this.dimension.itemsPer[this.indexDragItem] * (distInPer / 100);
+            return inc;
+        };
+
+        let inc: number = increment();
+        this.increment = inc;
+
+        this.liveSliderX = this.fixedSliderX + inc;
+        this.setPosition(-this.liveSliderX);
+
+    }
+
+    private switchShuffleAnimation(status: boolean): void {
+        if (status) {
+            this.window.style.transitionDuration = '';
+        } else {
+            this.window.style.transitionDuration = '0ms';
+        }
+    }
+
+    private dragEnd(mouseEvent: Event): void {
+        this.switchShuffleAnimation(true);
+
+        if (this.increment >= this.dimension.itemsPer[this.indexDragItem] >> 1) {
+            this.goTo(this.indexDragItem + 1);
+        } else if (this.increment <= -(this.dimension.itemsPer[this.indexDragItem] >> 1)) {
+            this.goTo(this.indexDragItem - 1);
+        } else {
+            this.setPosition(-this.fixedSliderX);
+        }
+
+        document.onmousemove = null;
+        document.onmouseup = null;
+        document.ontouchmove = null;
+        document.ontouchend = null;
+        // document.removeEventListener('mousemove', this.moveHandler);
+        // document.removeEventListener('mouseup', this.moveEndHandler);
+        // document.removeEventListener('touchmove', this.moveHandler);
+        // document.removeEventListener('touchend', this.moveEndHandler);
+    }
+
+    private globalEventDelegate(event: string, selector: string, callbackSuccess: Function, callbackFailed?: Function): void{
+        addEventListener(event, (event: MouseEvent) => {
+            let element: Element = ( <Element> event.target ).closest(`${selector}`);
+
+            if (element) {
+                callbackSuccess(element, event);
+                return;
+            } else if (callbackFailed) {
+                callbackFailed(event);
+            }
+        });
+    }
+
+    private getIndexElement(container: HTMLElement | Element, element: HTMLElement): number {
+        let containerArray: Array<HTMLElement> = [].slice.call( container.children );
+        return containerArray.indexOf(element, 0);
+    }
+
     private setPosition(pos: number, start?: boolean): void {
         this.window.style.transform = `translateX(${pos}%)`;
         // if (this.isIE() && this.isIE() <= 9) {
@@ -227,51 +327,46 @@ export default class Slider {
         // }
     }
 
+    private setDefaultSlidePosition(): void {
+        if (!this.config.startIndex) {
+            this.setPosition(0, true);
+        } else {
+            this.setPosition(-this.getNextPosition(), true);
+        }
+    }
+
     private isIE (): number | boolean {
         let myNav = navigator.userAgent.toLowerCase();
         return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
     }
 
-    private setDefaultSlidePosition(): void {
-        if (this.config.startIndex == 1) {
-            this.setPosition(0, true);
-        } else {
-            this.setPosition(-this.getIncrease(), true);
-        }
-    }
-
     private calcPrevPosition(): void {
-        if (this.currentPosition - 1 >= 1){
+        if (this.currentPosition - 1 >= 0){
             this.lastPosition = this.currentPosition;
             this.currentPosition--;
         } else {
             this.lastPosition = this.currentPosition;
             if (this.config.isLoop || this.config.isRewind) {
-                this.currentPosition = this.dimension.itemsPer.length;
+                this.currentPosition = this.dimension.itemsPer.length - 1;
             }
         }
 
     }
 
     private calcNextPosition(): void {
-        if (this.currentPosition + 1 <= this.dimension.itemsPer.length){
+        if (this.currentPosition + 1 < this.dimension.itemsPer.length){
             this.lastPosition = this.currentPosition;
             this.currentPosition++;
         } else {
             this.lastPosition = this.currentPosition;
             if (this.config.isLoop || this.config.isRewind) {
-                this.currentPosition = 1;
+                this.currentPosition = 0;
             }
         }
     }
 
-    private getIncrease(): number {
-        let nextPos: number = this.currentPosition - 1;
-        return this.dimension.itemsPer[this.currentPosition - 1];
-    }
-
-    private getLastPos(): number {
-        let nextPos: number = this.currentPosition - 1;
+    private getNextPosition(index: number = this.currentPosition): number {
+        let nextPos: number = index;
         let increase: number = 0;
         this.dimension.itemsPer.forEach((value, index) => {
             if (index < nextPos) {
@@ -279,6 +374,12 @@ export default class Slider {
             }
         });
         return increase;
+    }
+
+    private setItemSize(): void {
+        this.dimension.itemsPer.forEach((value, index) => {
+            (<HTMLElement>this.items.item(index)).style.width = `${value}%`;
+        })
     }
 
     private setSizeDisplayedArea(): void {
@@ -293,28 +394,35 @@ export default class Slider {
 
     private setAutoHeight(): void {
         if (this.config.isAutoHeight){
-            this.slider.style.height = (<HTMLElement>this.items.item(this.config.startIndex-1)).offsetHeight+'px';
+            this.slider.style.height = (<HTMLElement>this.items.item(this.config.startIndex)).offsetHeight+'px';
         }
     }
 
     private updateAutoHeight(): void {
         if (this.config.isAutoHeight){
-            this.slider.style.height = (<HTMLElement>this.items.item(this.currentPosition-1)).offsetHeight+'px';
+            this.slider.style.height = (<HTMLElement>this.items.item(this.currentPosition)).offsetHeight+'px';
         }
     }
 
     private updateBtnStyle(): void {
         if (!this.config.isRewind && !this.config.isLoop) {
-            if (this.currentPosition == 1) {
+            if (!this.currentPosition) {
                 this.config.btnLeft.classList.add(SliderClasses.btnDisabled);
             } else {
                 this.config.btnLeft.classList.remove(SliderClasses.btnDisabled);
             }
-            if (this.currentPosition == this.dimension.items.length) {
+            if (this.currentPosition == this.dimension.items.length - 1) {
                 this.config.btnRight.classList.add(SliderClasses.btnDisabled);
             } else {
                 this.config.btnRight.classList.remove(SliderClasses.btnDisabled);
             }
+        }
+    }
+
+    private updateDotsStyle(): void {
+        if (this.config.hasDots) {
+            this.dots.item(this.lastPosition).classList.remove(SliderClasses.dotActive);
+            this.dots.item(this.currentPosition).classList.add(SliderClasses.dotActive);
         }
     }
 
@@ -344,19 +452,12 @@ export default class Slider {
         }
     }
 
-    private updateDotsStyle(): void {
-        if (this.config.hasDots) {
-            this.dots.item(this.lastPosition - 1).classList.remove(SliderClasses.dotActive);
-            this.dots.item(this.currentPosition - 1).classList.add(SliderClasses.dotActive);
-        }
-    }
-
     private createFragmentDots(): DocumentFragment {
         let fragment: DocumentFragment = document.createDocumentFragment();
         for (let i = 0; i < this.countItem; i++) {
             let dot: HTMLElement = document.createElement('div');
             dot.classList.add(SliderClasses.dot);
-            if (i == this.currentPosition -1){
+            if (i == this.currentPosition){
                 dot.classList.add(SliderClasses.dotActive);
             }
             fragment.appendChild(dot);
@@ -497,13 +598,77 @@ export default class Slider {
         this.setAutoHeight();
         this.setDefaultSlidePosition();
         this.setSizeDisplayedArea();
+        this.setItemSize();
         this.updateBtnStyle();
         this.setSpeed();
         this.createDots();
         this.setButtonEvents();
+        this.setDotsEvents();
+        this.setDragEvents();
         this.activateAutoPlay();
         this.attachTrackCursorPosition();
 
+    }
+
+    public prev(): void {
+        if (this.config.countSwipe != 1) {
+            this.lastPosition = this.currentPosition;
+            this.currentPosition = this.currentPosition - this.config.countSwipe;
+        } else {
+            this.calcNextPosition();
+        }
+
+        this.updateAutoHeight();
+        this.updateBtnStyle();
+        this.updateDotsStyle();
+        if (this.lastPosition == 0) {
+            if (this.config.isLoop) {
+
+            }
+            if (this.config.isRewind) {
+                this.setPosition(-this.getNextPosition());
+            }
+        } else {
+            this.setPosition(-this.getNextPosition());
+        }
+
+    }
+
+    public next(): void {
+        if (this.config.countSwipe != 1) {
+            this.lastPosition = this.currentPosition;
+            this.currentPosition = this.currentPosition + this.config.countSwipe;
+        } else {
+            this.calcNextPosition();
+        }
+        this.updateAutoHeight();
+        this.updateBtnStyle();
+        this.updateDotsStyle();
+        if (this.lastPosition == this.dimension.items.length - 1) {
+            if (this.config.isLoop) {
+
+            }
+            if (this.config.isRewind) {
+                this.setPosition(0);
+            }
+        } else {
+            this.setPosition(-this.getNextPosition());
+        }
+
+    }
+
+    public goTo(index: number): void {
+        if (index >= this.dimension.items.length) {
+            index = this.dimension.items.length - 1;
+        } else if (index < 0) {
+            index = 0;
+        }
+        this.lastPosition = this.currentPosition;
+        this.currentPosition = index;
+        this.updateAutoHeight();
+        this.updateBtnStyle();
+        this.updateDotsStyle();
+        this.setPosition(-this.getNextPosition(index));
     }
 
 

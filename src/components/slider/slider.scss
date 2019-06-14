@@ -43,6 +43,7 @@
   border-radius: 100%;
   background-color: lightslategrey;
   margin: 0 5px;
+  cursor: pointer;
 }
 .lav-slider_dot_active{
   background-color: darkred;
@@ -66,7 +67,7 @@
 .lav-slider__item{
   display: inline-block;
   vertical-align: top;
-  width: 1135px;
+  //width: 1135px;
   height: 100%;
   background-color: blanchedalmond;
   overflow: hidden;
