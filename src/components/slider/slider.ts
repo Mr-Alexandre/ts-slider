@@ -24,7 +24,7 @@ interface SliderConfig {
     visibleItems?: number,
     countSwipe?: number,
     gutter?: number,
-    fixedWidth?: number | boolean,
+    fixedWidth?: number,
     autoWidth?: boolean,
     startIndex?: number,
     speed?: number,
@@ -81,7 +81,7 @@ export default class Slider {
         visibleItems: 1,
         countSwipe: 1,
         gutter: 0,
-        fixedWidth: false,
+        fixedWidth: null,
         autoWidth: false,
         startIndex: 1,
         speed: 400,
@@ -340,6 +340,7 @@ export default class Slider {
         return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
     }
 
+    /*TODO: remove this method*/
     private calcPrevPosition(): void {
         if (this.currentPosition - 1 >= 0){
             this.lastPosition = this.currentPosition;
@@ -353,6 +354,7 @@ export default class Slider {
 
     }
 
+    /*TODO: remove this method*/
     private calcNextPosition(): void {
         if (this.currentPosition + 1 < this.dimension.itemsPer.length){
             this.lastPosition = this.currentPosition;
@@ -438,7 +440,7 @@ export default class Slider {
             } else {
                 let fragment: DocumentFragment = document.createDocumentFragment();
                 let dotsBox: HTMLElement = document.createElement('div');
-                    dotsBox.classList.add(SliderClasses.dots);
+                dotsBox.classList.add(SliderClasses.dots);
                 fragment.appendChild(dotsBox);
                 fragment.firstChild.appendChild(this.createFragmentDots());
                 this.slider.appendChild(fragment);
@@ -493,6 +495,7 @@ export default class Slider {
         }
     }
 
+    // @ts-ignore-start
     private polyffil(): void {
         /**
          * Element.closest() | MDN
@@ -571,6 +574,7 @@ export default class Slider {
             }
         })();
     }
+    // @ts-ignore-end
 
     private isHover(): boolean {
         let elementMouseIsOver: Element = document.elementFromPoint(this.cursorPos.lastX, this.cursorPos.lastY);
@@ -589,6 +593,15 @@ export default class Slider {
         for (let i = 0; i < this.countItem; i++) {
 
         }
+    }
+
+    private getNextPosIfNotDeedEnd(position: number): number {
+        if (position > this.countItem - 1) {
+            return Math.abs(position - this.countItem);
+        } else if (position < 0) {
+            return Math.abs(this.countItem  - Math.abs(position));
+        }
+        return position;
     }
 
     private init(): void {
@@ -611,48 +624,25 @@ export default class Slider {
     }
 
     public prev(): void {
-        if (this.config.countSwipe != 1) {
-            this.lastPosition = this.currentPosition;
-            this.currentPosition = this.currentPosition - this.config.countSwipe;
-        } else {
-            this.calcNextPosition();
-        }
 
-        this.updateAutoHeight();
-        this.updateBtnStyle();
-        this.updateDotsStyle();
-        if (this.lastPosition == 0) {
-            if (this.config.isLoop) {
-
-            }
-            if (this.config.isRewind) {
-                this.setPosition(-this.getNextPosition());
-            }
+        if (this.config.isLoop || this.config.isRewind) {
+            let nextPos: number = this.getNextPosIfNotDeedEnd(this.currentPosition - this.config.countSwipe);
+            this.goTo(nextPos);
         } else {
-            this.setPosition(-this.getNextPosition());
+            let nextPos: number = this.currentPosition - this.config.countSwipe;
+            this.goTo(nextPos);
         }
 
     }
 
     public next(): void {
-        if (this.config.countSwipe != 1) {
-            this.lastPosition = this.currentPosition;
-            this.currentPosition = this.currentPosition + this.config.countSwipe;
-        } else {
-            this.calcNextPosition();
-        }
-        this.updateAutoHeight();
-        this.updateBtnStyle();
-        this.updateDotsStyle();
-        if (this.lastPosition == this.dimension.items.length - 1) {
-            if (this.config.isLoop) {
 
-            }
-            if (this.config.isRewind) {
-                this.setPosition(0);
-            }
+        if (this.config.isLoop || this.config.isRewind) {
+            let nextPos: number = this.getNextPosIfNotDeedEnd(this.currentPosition + this.config.countSwipe);
+            this.goTo(nextPos);
         } else {
-            this.setPosition(-this.getNextPosition());
+            let nextPos: number = this.currentPosition + this.config.countSwipe;
+            this.goTo(nextPos);
         }
 
     }
