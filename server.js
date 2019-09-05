@@ -11,7 +11,6 @@ app.post('/test', function (req, res) {
     res.send('<p>Test successful</p>');
 });
 
-
 const server = app.listen(8181, function () {
     console.log('API server started, Available on: http://127.0.0.1:8181');
 });

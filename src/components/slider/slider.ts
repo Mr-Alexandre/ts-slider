@@ -8,6 +8,7 @@ enum SliderClasses {
     dotActive = 'lav-slider_dot_active',
     contents = 'lav-slider__contents',
     window = 'lav-slider__window',
+    additionalContainer = 'lav-slider__add-container',
     item = 'lav-slider__item',
     itemActive = 'lav-slider__item_active',
     duration = 'lav-slider__window_duration',
@@ -56,6 +57,7 @@ export default class Slider {
 
     private slider: HTMLElement;
     private contents: HTMLElement;
+    private addContainer: HTMLElement;
     private items: HTMLCollectionOf<Element>;
     private window: HTMLElement;
     private dotsBox: HTMLElement = null;
@@ -157,12 +159,17 @@ export default class Slider {
         if (!this.config.autoWidth) {
             this.dimension.window = widthSlider * this.countItem;
             for (let i = 0; i < this.countItem; i++) {
-                this.dimension.items.push(widthSlider);
+                if (this.config.visibleItems) {
+                    this.dimension.items.push(widthSlider / this.config.visibleItems);
+                } else {
+                    this.dimension.items.push(widthSlider);
+                }
+
             }
         } else {
             this.dimension.window = this.dimension.items.reduce((first, next) => {
                 return first + next;
-            })
+            });
             for (let i = 0; i < this.countItem; i++) {
                 this.dimension.items.push((<HTMLElement>this.items.item(i)).offsetWidth);
             }
@@ -170,9 +177,9 @@ export default class Slider {
 
         this.dimension.windowPer = (this.dimension.window/widthSlider) * 100;
 
-        this.dimension.items.forEach(value => {
-            this.dimension.itemsPer.push( (value/this.dimension.window) * 100 );
-        })
+        for (let i = 0, len = this.dimension.items.length; i < len; i++) {
+            this.dimension.itemsPer.push( (this.dimension.items[i]/this.dimension.window) * 100 );
+        }
 
     }
 
@@ -331,40 +338,18 @@ export default class Slider {
         if (!this.config.startIndex) {
             this.setPosition(0, true);
         } else {
-            this.setPosition(-this.getNextPosition(), true);
+            const countDots: number = this.config.visibleItems ? this.countItem / this.config.visibleItems : this.config.visibleItems;
+            if (this.currentPosition +1 > countDots) {
+                this.setPosition(0, true);
+            } else {
+                this.setPosition(-this.getNextPosition(), true);
+            }
         }
     }
 
     private isIE (): number | boolean {
         let myNav = navigator.userAgent.toLowerCase();
         return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
-    }
-
-    /*TODO: remove this method*/
-    private calcPrevPosition(): void {
-        if (this.currentPosition - 1 >= 0){
-            this.lastPosition = this.currentPosition;
-            this.currentPosition--;
-        } else {
-            this.lastPosition = this.currentPosition;
-            if (this.config.isLoop || this.config.isRewind) {
-                this.currentPosition = this.dimension.itemsPer.length - 1;
-            }
-        }
-
-    }
-
-    /*TODO: remove this method*/
-    private calcNextPosition(): void {
-        if (this.currentPosition + 1 < this.dimension.itemsPer.length){
-            this.lastPosition = this.currentPosition;
-            this.currentPosition++;
-        } else {
-            this.lastPosition = this.currentPosition;
-            if (this.config.isLoop || this.config.isRewind) {
-                this.currentPosition = 0;
-            }
-        }
     }
 
     private getNextPosition(index: number = this.currentPosition): number {
@@ -456,15 +441,61 @@ export default class Slider {
 
     private createFragmentDots(): DocumentFragment {
         let fragment: DocumentFragment = document.createDocumentFragment();
-        for (let i = 0; i < this.countItem; i++) {
+        const countDots: number = this.config.visibleItems ? this.countItem / this.config.visibleItems : this.config.visibleItems;
+        for (let i = 0; i < countDots; i++) {
             let dot: HTMLElement = document.createElement('div');
             dot.classList.add(SliderClasses.dot);
-            if (i == this.currentPosition){
-                dot.classList.add(SliderClasses.dotActive);
+
+            if (this.currentPosition +1 > countDots) {
+                if (i == 0){
+                    dot.classList.add(SliderClasses.dotActive);
+                }
+                // throw new Error('Неправильно переданное значение позимии');
+            } else {
+                if (i == this.currentPosition){
+                    dot.classList.add(SliderClasses.dotActive);
+                }
             }
             fragment.appendChild(dot);
         }
         return fragment;
+    }
+
+    private createAdditionalElementsForLoop(): void {
+        let addContainer: HTMLElement = document.createElement('div');
+        addContainer.classList.add(SliderClasses.additionalContainer);
+        let fragment: DocumentFragment = document.createDocumentFragment();
+
+        let visibleItems: number = this.config.visibleItems;
+        let width: number = 0;
+        let widthPer: number = 0;
+        /*add first items*/
+        for (let i = 0; i < visibleItems; i++) {
+            /*add first items*/
+            fragment.appendChild(this.items.item(i).cloneNode(true));
+
+            /*add last items*/
+            let index: number = this.items.length - (i+1);
+            fragment.appendChild(this.items.item(index).cloneNode(true));
+
+            /*Calc width*/
+            width += this.dimension.items[i] + this.dimension.items[index];
+        }
+        widthPer = (this.dimension.window/width) * 100;
+
+        addContainer.append(fragment);
+        this.contents.appendChild(addContainer);
+        this.addContainer = this.contents.querySelector(`.${SliderClasses.additionalContainer}`);
+
+        /*Calc style*/
+        let style: string = '';
+        if (!this.config.isAutoHeight){
+            style += 'height: 100%; ';
+        }
+
+        style += `width: ${widthPer}%; `;
+        this.addContainer.style.cssText += style;
+
     }
 
     private attachTrackCursorPosition(): void {
@@ -590,9 +621,7 @@ export default class Slider {
     }
 
     private setWidthItems(): void {
-        for (let i = 0; i < this.countItem; i++) {
 
-        }
     }
 
     private getNextPosIfNotDeedEnd(position: number): number {
@@ -620,7 +649,7 @@ export default class Slider {
         this.setDragEvents();
         this.activateAutoPlay();
         this.attachTrackCursorPosition();
-
+        this.createAdditionalElementsForLoop();
     }
 
     public prev(): void {
